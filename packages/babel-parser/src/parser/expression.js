@@ -206,6 +206,7 @@ export default class ExpressionParser extends LValParser {
     const startPos = this.state.start;
     const startLoc = this.state.startLoc;
     const expr = this.parseMaybeAssign(refExpressionErrors);
+
     if (this.match(tt.comma)) {
       const node = this.startNodeAt(startPos, startLoc);
       node.expressions = [expr];
@@ -883,6 +884,12 @@ export default class ExpressionParser extends LValParser {
           }
         }
       }
+    }
+    // throw new Error(node);
+    if (this.match(tt.braceL)) {
+      const param = this.parseBlockParam();
+      node.arguments.push(param);
+      // console.log(node);
     }
     return this.finishNode(
       node,
@@ -2079,6 +2086,23 @@ export default class ExpressionParser extends LValParser {
       node,
       isTuple ? "TupleExpression" : "ArrayExpression",
     );
+  }
+
+  // Parse block params as arrow function expressions.
+  parseBlockParam(): N.ArrowFunctionExpression {
+    const node = this.startNode();
+    const isAsync = false;
+    this.scope.enter(SCOPE_FUNCTION | SCOPE_ARROW);
+    const flags = functionFlags(isAsync, false);
+    this.prodParam.enter(flags);
+    this.initFunction(node, isAsync);
+    this.setArrowFunctionParameters(node, []);
+    this.state.maybeInArrowParameters = false;
+    this.parseFunctionBody(node, false, false);
+    this.prodParam.exit();
+    this.scope.exit();
+
+    return this.finishNode(node, "ArrowFunctionExpression");
   }
 
   // Parse arrow function expression.
